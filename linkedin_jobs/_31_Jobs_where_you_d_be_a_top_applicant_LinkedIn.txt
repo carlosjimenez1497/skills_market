@@ -1,0 +1,60 @@
+About the job
+
+Are you ready to showcase your skills as a Python Developer at a fast-growing international scale-up? In our driven development team, we offer you the chance to play a crucial role in achieving our ambitious goals. Will you be the driving force behind our data goldmine? Then join us quickly and be part of our winning team!
+
+
+
+
+What will you do?
+
+As a Python Developer at Leadinfo, you’ll hold a responsible position where you ensure the data quality of millions of companies and manage a database of terabytes of data, which grows daily by several percent. Our goal is to offer the best data, and we always give our all to achieve this. Therefore, we continuously challenge the technology and iterate on all features to deliver maximum results and nothing less than a "wow" effect.
+
+
+
+
+Key responsibilities
+
+Setting up and maintaining a data dictionary: You will analyze the impact of different sources on data quality.
+Improving data quality with colleagues from other countries: At Leadinfo, we are growing fast and aim to conquer the world with our product. For this, it’s essential that we have the best data quality in the countries where our product is sold. Our ambition for the coming years is to become market leaders in the UK, Scandinavia, and Italy. We need someone who proactively improves quality in these regions.
+Building new products from scratch: Together with our most team of Data Engineers and Python Developers, you'll be responsible for product development and building our new pipelines and products from scratch.
+Providing support for customer findings: We want to be market leaders in recognition and data quality. Sometimes data may become outdated, and in such cases, we want to assist our customers as effectively as possible to fulfill our promises.
+Research and development of new technologies: You will continuously research and implement new technologies and frameworks to improve platform performance and further optimize the user experience.
+
+
+
+
+Who are you?
+
+To start as a Python Developer at Leadinfo.com, you need at least 3 full years of experience as a Python Developer or Data Engineer. We hope you bring the following skills:
+
+Python & SQL skills, preferably Spark or PySpark as well
+Hands-on expertise in building and maintaining ETL pipelines for data ingestion, transformation, and storage.
+Experience with Orchestration tools, we use Prefect.
+Data storage and processing, like AWS Athena and AWS Glue for storing and processing data.
+Experience with DevOps practices and deployment
+The Leadinfo winner's mentality, with passion and enthusiasm for improving every day.
+
+
+
+
+Who are we?
+
+At Leadinfo, we dominate the B2B marketing world! We believe not only in numbers and campaigns but in a mix of creativity, passion, and discovering new possibilities. We are an energetic scale-up with our headquarters in Rotterdam. Leadinfo is the number one in lead generation in the B2B world. We have thousands of customers and collaborate with over 2,000 marketing agencies and major players like LinkedIn, Google, and HubSpot. Our mission? To provide every company with top-quality leads! The young team of 50 colleagues, including 8 developers (with an average age of 28), has a strong winner's mentality to achieve this goal. We work from our offices in the Netherlands, Belgium, Italy, Denmark, and Germany.
+
+
+
+
+Perks at Leadinfo:
+
+At Leadinfo, we value your effort! What do you get in return?
+
+26 vacation days + 2 moving days + an extra day off on your birthday;
+Pension plan (90/10);
+Hybrid working environment (50/50 from the office and from home);
+A €50 monthly budget to spend freely (e.g., sports, hotel stays, meal kits, and much more);
+Healthy work/life balance;
+Macbook;
+An international team;
+Daily lunch and snacks;
+Pool table, Xbox, and Mario Kart on the Switch;
+Lots of fun, Friday afternoon drinks, and parties!
