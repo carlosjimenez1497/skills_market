@@ -57,6 +57,62 @@ def normalize_job_link(job_href):
 # ---------- main ----------
 init_db()
 
+def get_scroll_container(page):
+    # This is the scrollable viewport in your DOM
+    sc = page.locator("div.scaffold-layout__list").first
+    content_div = page.locator(
+        "div.scaffold-layout__list > header + div"
+    ).first
+    if content_div.count() == 0:
+        raise RuntimeError("Could not find scroll container: div.scaffold-layout__list")
+    return content_div
+
+
+def scroll_container_by(page, container, amount: int):
+    # scrollTop += amount
+
+    page.evaluate(
+        """(params) => {
+            params.el.scrollTop = params.el.scrollTop + params.dy;
+        }""",
+        {
+            "el": container.element_handle(),
+            "dy": amount
+        }
+    )
+
+
+def click_card_index_with_scroll(page, container, i: int, max_tries: int = 5):
+    """
+    Ensures card i is interactable by scrolling the container progressively.
+    Returns job_id string.
+    """
+    for attempt in range(max_tries):
+        # Re-query fresh each attempt (DOM can change)
+        card = page.locator("li[data-occludable-job-id]").nth(i)
+        job_id = card.get_attribute("data-occludable-job-id") or ""
+
+        link = card.locator("a.job-card-container__link").first
+
+        try:
+            # Quick check: if link is visible, try click
+            if link.count() > 0 and link.is_visible():
+                link.click(timeout=3000, force=True)
+                return job_id
+
+            # If not visible, scroll down a bit and retry
+            scroll_container_by(page, container, 500)
+            page.wait_for_timeout(250)
+
+        except Exception as e:
+            # If click failed (overlay, etc.), scroll a bit and retry
+            scroll_container_by(page, container, 350)
+            page.wait_for_timeout(300)
+            print(f"Error while scrolling {e}")
+
+    raise RuntimeError(f"Could not click card index {i} after {max_tries} tries")
+
+
 with sync_playwright() as p:
     context = p.chromium.launch_persistent_context(
         user_data_dir="pw_profile_linkedin",
@@ -73,27 +129,31 @@ with sync_playwright() as p:
         # Wait up to 2 minutes for you to finish logging in
         page.wait_for_url("**/jobs/**", timeout=120_000)
 
+    
+    
+    page.wait_for_selector("li[data-occludable-job-id]", timeout=15_000)
+    container = get_scroll_container(page)
     # Give time for the job details panel to render
     # Wait for the left list to be present
-    page.wait_for_selector("li[data-occludable-job-id]", timeout=15_000)
+    
 
     cards = page.locator("li[data-occludable-job-id]")
     count = min(cards.count(), MAX_JOBS_PER_PAGE)
     print("Found cards:", cards.count(), "-> will process:", count)
 
     for i in range(count):
-        card = cards.nth(i)
+        job_id = click_card_index_with_scroll(page, container, i)
 
-        job_id = card.get_attribute("data-occludable-job-id") or ""
-        link = card.locator("a.job-card-container__link").first
-
-        # Make sure it's in view (helps reliability)
-        # link.scroll_into_view_if_needed()
-        page.wait_for_timeout(300)
-
-        # Click job card
-        link.click()
+        # Wait for right panel to update to this job
         page.wait_for_selector("div.job-details-jobs-unified-top-card__job-title", timeout=15_000)
+        # page.wait_for_function(
+        #     """(jobId) => {
+        #         const a = document.querySelector('div.job-details-jobs-unified-top-card__job-title h1 a');
+        #         return a && a.getAttribute('href') && a.getAttribute('href').includes('/jobs/view/' + jobId);
+        #     }""",
+        #     job_id,
+        #     timeout=15_000
+        # )
 
         # ---- extract fields ----
         # --- Job title ---
