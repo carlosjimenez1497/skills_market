@@ -1,3 +1,5 @@
+const API = import.meta.env.VITE_API_BASE;
+if (!API) throw new Error("VITE_API_BASE is not set");
 export type Job = {
   id: number;
   source: string;
@@ -6,6 +8,7 @@ export type Job = {
   title?: string | null;
   location?: string | null;
   description?: string | null;
+  job_view_url?: string | null;
 };
 
 export type JobsCount = { total: number };
@@ -17,7 +20,7 @@ export async function fetchJobs(params: {
   limit?: number;
   offset?: number;
 }): Promise<Job[]> {
-  const url = new URL("http://localhost:8000/api/jobs");
+  const url = new URL(`${API}/api/jobs`);
   Object.entries(params).forEach(([k, v]) => {
     if (v === undefined || v === null || v === "") return;
     url.searchParams.set(k, String(v));
@@ -34,7 +37,7 @@ export async function fetchJobsCount(params: {
   language?: string;
   keywords?: string;
 }): Promise<JobsCount> {
-  const url = new URL("http://localhost:8000/api/jobs/count");
+  const url = new URL(`${API}/api/jobs/count`);
   Object.entries(params).forEach(([k, v]) => {
     if (v === undefined || v === null || v === "") return;
     url.searchParams.set(k, String(v));
