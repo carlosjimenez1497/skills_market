@@ -13,11 +13,12 @@ app = FastAPI(title="Job API")
 
 
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+origin_regex = os.getenv("CORS_ORIGIN_REGEX", "")
 
-# For local dev. Lock down later.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in origins if o.strip()],
+    allow_origin_regex=origin_regex or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
