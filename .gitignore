@@ -1,2 +1,4 @@
 pw_profile_linkedin/
 .venv/
+__pycache__/
+log/

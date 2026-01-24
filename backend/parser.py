@@ -8,10 +8,11 @@ import datetime
 
 from utils.utils import write_log
 
-DB_PATH = Path("jobs.db")
+DB_PATH = Path("db/jobs.db")
 # JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
 JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
+JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords=finance%20business%20partner&origin=JOB_SEARCH_PAGE_JOB_FILTER"
 MAX_JOBS_PER_PAGE = 25
 MAX_PAGES = 25
 
@@ -219,17 +220,18 @@ def process_current_page(page, container):
 
             cur.execute("""
             INSERT OR IGNORE INTO jobs (
-                source, source_url, job_view_url,
+                source, source_url, job_view_url, job_id,
                 company, title, location,
                 description, fingerprint,
                 first_seen, last_seen, times_seen,
                 created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE('now'), DATE('now'), 1, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE('now'), DATE('now'), 1, ?, ?)
             """, (
                 "linkedin",
                 page.url,          # search / collection URL
                 job_view_url,      # clean job link
+                job_id,
                 company,
                 title,
                 location,
@@ -247,9 +249,10 @@ def process_current_page(page, container):
                     times_seen = times_seen + 1,
                     updated_at = ?,
                     job_view_url = ?,
+                    job_id = ?,
                     description = ?
                 WHERE fingerprint = ?
-                """, (now, job_view_url, description, fingerprint))
+                """, (now, job_view_url, job_id, description, fingerprint))
 
             conn.commit()
 

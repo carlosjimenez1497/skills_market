@@ -6,7 +6,7 @@ import re
 import time
 import datetime
 
-DB_PATH = Path("jobs.db")
+DB_PATH = Path("db/jobs.db")
 JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
 
 

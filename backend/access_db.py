@@ -1,6 +1,6 @@
 import sqlite3
 
-conn = sqlite3.connect("jobs.db")
+conn = sqlite3.connect("db/jobs.db")
 for row in conn.execute("SELECT id, company, title, location , job_view_url FROM jobs"):
     print(row)
 conn.close()
