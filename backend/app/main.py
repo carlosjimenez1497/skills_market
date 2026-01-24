@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -43,6 +43,25 @@ class JobOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class JobUpsertIn(BaseModel):
+    # Identity & dedup
+    job_id: str | None = None
+    fingerprint: str
+
+    # Source
+    source: str
+    source_url: str
+    job_view_url: str | None = None
+
+    # Job content
+    company: str | None = None
+    title: str | None = None
+    location: str | None = None
+    description: str | None = None
+
+    # Metadata
+    language_code: str | None = None
+
 def apply_job_filters(
     q: SAQuery,
     *,
@@ -70,6 +89,13 @@ def apply_job_filters(
 
     return q
 
+
+# --- optional simple auth for your local scraper ---
+def require_api_key(x_api_key: str | None = Header(default=None)):
+    expected = os.getenv("SCRAPER_API_KEY")
+    if expected and x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 @app.get("/api/jobs", response_model=list[JobOut])
 def list_jobs(
     db: Session = Depends(get_db),
@@ -95,3 +121,40 @@ def count_jobs(
     q = apply_job_filters(q, track=track, language=language, keywords=keywords)
     total = q.count()
     return {"total": total}
+
+@app.post("/api/jobs/upsert")
+def upsert_job(
+    payload: JobUpsertIn,
+    db: Session = Depends(get_db),
+    # _=Depends(require_api_key),  # remove if you don't want auth yet
+):
+    now = datetime.utcnow()
+
+    existing = db.query(Job).filter(Job.fingerprint == payload.fingerprint).first()
+
+    if existing:
+        # update existing record
+        existing.last_seen = now
+        existing.times_seen = (existing.times_seen or 0) + 1
+        existing.updated_at = now
+
+        # refresh fields when new values exist
+        for k, v in payload.model_dump().items():
+            if v is not None and v != "":
+                setattr(existing, k, v)
+
+        db.commit()
+        return {"status": "updated", "id": existing.id}
+
+    # insert new record
+    j = Job(**payload.model_dump())
+    j.first_seen = now
+    j.last_seen = now
+    j.created_at = now
+    j.updated_at = now
+    j.times_seen = 1
+
+    db.add(j)
+    db.commit()
+    db.refresh(j)
+    return {"status": "inserted", "id": j.id}

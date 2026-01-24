@@ -4,10 +4,14 @@ from playwright.sync_api import sync_playwright
 import hashlib
 import re
 # import time
-import datetime
+# import datetime
+import requests
+import os
 
 from utils.utils import write_log
+from lang_detect import FastTextLangDetector
 
+API_BASE = os.environ["API_BASE"]  # e.g. https://your-backend.onrender.com
 DB_PATH = Path("db/jobs.db")
 # JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
@@ -16,6 +20,9 @@ JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords
 MAX_JOBS_PER_PAGE = 25
 MAX_PAGES = 25
 
+
+
+detector = FastTextLangDetector("lang_models/lid.176.ftz")
 
 # ---------- helpers ----------
 def normalize(text: str) -> str:
@@ -211,59 +218,53 @@ def process_current_page(page, container):
             # Fallback: save the whole visible text (not ideal, but proves extraction works)
             description = page.locator("body").inner_text().strip()
 
+        r1, r2 = detector.detect_top2(description)
         fingerprint = make_fingerprint(company, title, location)
-        now = datetime.datetime.utcnow().isoformat()
+        # now = datetime.datetime.utcnow().isoformat()
 
         # ---- save to SQLite ----
-        with sqlite3.connect(DB_PATH) as conn:
-            cur = conn.cursor()
+        payload = {
+            "source": "linkedin",
+            "source_url": JOB_URL,
+            "job_view_url": job_view_url,
+            "job_id": job_id,
+            "company": company or None,
+            "title": title or None,
+            "location": location or None,
+            "description": description or None,
+            "language_code": r1.code,  # set if you have it
+            "fingerprint": fingerprint,
+        }
 
-            cur.execute("""
-            INSERT OR IGNORE INTO jobs (
-                source, source_url, job_view_url, job_id,
-                company, title, location,
-                description, fingerprint,
-                first_seen, last_seen, times_seen,
-                created_at, updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, DATE('now'), DATE('now'), 1, ?, ?)
-            """, (
-                "linkedin",
-                page.url,          # search / collection URL
-                job_view_url,      # clean job link
-                job_id,
-                company,
-                title,
-                location,
-                description,
-                fingerprint,
-                now,
-                now
-            ))
+        try:
+            result = upsert_job_via_api(payload)
+            print(f"[{i+1}/{count}] {result['status']}: {company} — {title} — {location}")
+            write_log(f"[{i+1}/{count}] {result['status']}: {company} — {title} — {location}")
+        except Exception as e:
+            print(f"[{i+1}/{count}] API upsert failed: {e}")
+            write_log(f"[{i+1}/{count}] API upsert failed: {e}")
 
-            if cur.rowcount == 0:
-                # already existed -> update
-                cur.execute("""
-                UPDATE jobs
-                SET last_seen = DATE('now'),
-                    times_seen = times_seen + 1,
-                    updated_at = ?,
-                    job_view_url = ?,
-                    job_id = ?,
-                    description = ?
-                WHERE fingerprint = ?
-                """, (now, job_view_url, job_id, description, fingerprint))
 
-            conn.commit()
-
-        print(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
-        write_log(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
+        # print(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
+        # write_log(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
         # print("Saved job to SQLite ✔")
         page.wait_for_timeout(800)
 
 def get_first_job_id(page) -> str:
     page.wait_for_selector("li[data-occludable-job-id]", timeout=15_000)
     return page.locator("li[data-occludable-job-id]").first.get_attribute("data-occludable-job-id") or ""
+
+def upsert_job_via_api(job_payload: dict):
+    url = f"{API_BASE}/api/jobs/upsert"
+    # headers = {}
+    # if SCRAPER_API_KEY:
+    #     headers["X-API-Key"] = SCRAPER_API_KEY
+
+    # r = requests.post(url, json=job_payload, headers=headers, timeout=30)
+    r = requests.post(url, json=job_payload, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
 
 with sync_playwright() as p:
     context = p.chromium.launch_persistent_context(
