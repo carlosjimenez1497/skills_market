@@ -78,7 +78,7 @@ export default function App() {
 
 
   return (
-    <div style={{ fontFamily: "system-ui", padding: 20, maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ fontFamily: "system-ui", padding: 20, maxWidth: 1400, margin: "0 auto" }}>
       <h1>Job Browser</h1>
 
       {page === "home" ? (
@@ -191,9 +191,24 @@ export default function App() {
           </div>
 
           {/* ✅ NEW: 2-column layout */}
-          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              height: "100vh", // 🔑 constrain height
+              gap: 12,
+              padding: 12,
+            }}
+          >
             {/* LEFT: job list */}
-            <div style={{ display: "grid", gap: 10 }}>
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto", // 🔑 own scroll
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: 8,
+              }}
+            >
               {jobs.map((j) => {
                 const isSelected = j.id === selectedJobId;
 
@@ -243,14 +258,11 @@ export default function App() {
             {/* RIGHT: selected job details */}
             <div
               style={{
+                flex: 1,
+                overflowY: "auto", // 🔑 own scroll
                 border: "1px solid #ddd",
-                borderRadius: 12,
-                padding: 12,
-                background: "white",
-                position: "sticky",
-                top: 20,
-                height: "fit-content",
-                minHeight: 220,
+                borderRadius: 8,
+                padding: 8,
               }}
             >
               {!selectedJob ? (
