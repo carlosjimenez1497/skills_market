@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+// import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchJobs, fetchJobsCount, type Job } from "./api";
 
 
 type Track = "software" | "finance";
 
-function toKeywordsCsv(raw: string) {
-  return raw
-    .split(/[,;]+|\s{2,}|\n|\t| /g)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join(",");
-}
+// function toKeywordsCsv(raw: string) {
+//   return raw
+//     .split(/[,;]+|\s{2,}|\n|\t| /g)
+//     .map((s) => s.trim())
+//     .filter(Boolean)
+//     .join(",");
+// }
 
 export default function App() {
   const [page, setPage] = useState<"home" | "browse">("home");
