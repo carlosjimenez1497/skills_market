@@ -28,7 +28,7 @@ export default function App() {
   const [pageSize, setPageSize] = useState(25); // choose 25/50
   const [total, setTotal] = useState(0);
 
-  const keywordsCsv = useMemo(() => toKeywordsCsv(keywordInput), [keywordInput]);
+  // const keywordsCsv = useMemo(() => toKeywordsCsv(keywordInput), [keywordInput]);
 
   const selectedJob = jobs.find((j) => j.id === selectedJobId) ?? null;
   const offset = (pageNum - 1) * pageSize;
@@ -42,20 +42,21 @@ export default function App() {
     setErr(null);
 
     const langParam = language === "Any" ? undefined : language;
-    const kwCsv = keywordsCsv || undefined;
+    // const kwCsv = keywordsCsv || undefined;
+    const kw = keywordInput.trim() || undefined;
 
     Promise.all([
       fetchJobs({
         track,
         language: langParam,
-        keywords: kwCsv,
+        keywords: kw,
         limit: pageSize,
         offset,
       }),
       fetchJobsCount({
         track,
         language: langParam,
-        keywords: kwCsv,
+        keywords: kw,
       }),
     ])
       .then(([jobsData, countData]) => {
@@ -67,7 +68,7 @@ export default function App() {
       })
       .catch((e) => setErr(e.message || "Unknown error"))
       .finally(() => setLoading(false));
-  }, [page, track, language, keywordsCsv, pageSize, offset]);
+  }, [page, track, language, keywordInput, pageSize, offset]);
 
 
   useEffect(() => {
