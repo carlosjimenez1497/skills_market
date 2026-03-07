@@ -1,6 +1,7 @@
 // import { useEffect, useMemo, useState } from "react";
 import { useEffect, useState } from "react";
 import { fetchJobs, fetchJobsCount, type Job } from "./api";
+import { supabase } from "./supabase";
 
 
 type Track = "software" | "finance";
@@ -14,6 +15,60 @@ type Track = "software" | "finance";
 // }
 
 export default function App() {
+  // ========================
+  // AUTH STATE
+  // ========================
+  const [session, setSession] = useState<any>(null);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authErr, setAuthErr] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  async function handleAuth() {
+    setAuthLoading(true);
+    setAuthErr(null);
+
+    try {
+      if (authMode === "signup") {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setAuthErr("Check your email to confirm your account.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      }
+    } catch (e: any) {
+      setAuthErr(e.message ?? "Auth error");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+  }
+
+  // ========================
+  // APP STATE (LOGGED IN)
+  // ========================
   const [page, setPage] = useState<"home" | "browse">("home");
   const [track, setTrack] = useState<Track | null>(null);
 
@@ -29,12 +84,9 @@ export default function App() {
   const [pageSize, setPageSize] = useState(25); // choose 25/50
   const [total, setTotal] = useState(0);
 
-  // const keywordsCsv = useMemo(() => toKeywordsCsv(keywordInput), [keywordInput]);
-
   const selectedJob = jobs.find((j) => j.id === selectedJobId) ?? null;
   const offset = (pageNum - 1) * pageSize;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  
 
   useEffect(() => {
     if (page !== "browse" || !track) return;
@@ -77,8 +129,65 @@ export default function App() {
     setPageNum(1);
   }, [page, track, language, keywordInput]);
 
+  // ========================
+  // IF NOT LOGGED IN → SHOW AUTH
+  // ========================
+  if (!session) {
+    return (
+      <div style={{ padding: 40, maxWidth: 420, margin: "0 auto" }}>
+        <h1>{authMode === "login" ? "Log in" : "Sign up"}</h1>
 
+        <div style={{ display: "grid", gap: 10 }}>
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            onClick={handleAuth}
+            disabled={!email || !password || authLoading}
+          >
+            {authLoading
+              ? "..."
+              : authMode === "login"
+              ? "Log in"
+              : "Create account"}
+          </button>
+
+          {authErr && (
+            <div style={{ color: authErr.includes("Check") ? "black" : "crimson" }}>
+              {authErr}
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              setAuthErr(null);
+              setAuthMode((m) => (m === "login" ? "signup" : "login"));
+            }}
+          >
+            {authMode === "login"
+              ? "Need an account? Sign up"
+              : "Have an account? Log in"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  
+
+  // ========================
+  // MAIN APP UI
+  // ========================
   return (
     <div style={{ fontFamily: "system-ui", padding: 20, maxWidth: 1400, margin: "0 auto" }}>
       <h1>Job Browser</h1>
@@ -117,7 +226,7 @@ export default function App() {
                 setLanguage("Any");
                 setKeywordInput("");
                 setJobs([]);
-                setSelectedJobId(null); // ✅ reset selection when leaving
+                setSelectedJobId(null); // ✅ reset selection when leavingZ
               }}
             >
               ← Back
