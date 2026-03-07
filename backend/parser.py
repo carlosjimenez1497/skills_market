@@ -15,10 +15,16 @@ API_BASE = os.environ["API_BASE"]  # e.g. https://your-backend.onrender.com
 DB_PATH = Path("db/jobs.db")
 # JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
-JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
-JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords=finance%20business%20partner&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3&f_TPR=r604800&f_WT=3%2C1%2C2&geoId=102890719&keywords=Software%20Engineer%20python&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords=finance%20business%20partner&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=1%2C2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Python%20AND%20(software%20OR%20backend%20OR%20engineer%20OR%20simulation)%20AND%20Netherlands&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&spellCorrectionEnabled=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Simulation%20Software%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&spellCorrectionEnabled=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Engineering%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Application%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&trk=d_flagship3_salary_explorer"
+JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Netherlands%20AND%20Python%20AND%20automotive%20AND%20simulation&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
 MAX_JOBS_PER_PAGE = 25
-MAX_PAGES = 25
+MAX_PAGES = 30
 
 
 
@@ -68,7 +74,7 @@ def normalize_job_link(job_href):
 
 
 # ---------- main ----------
-init_db()
+# init_db()
 
 def get_scroll_container(page):
     # This is the scrollable viewport in your DOM
@@ -187,9 +193,14 @@ def process_current_page(page, container):
         job_view_url = normalize_job_link(job_href)
 
         # --- Company name ---
-        company = page.locator(
+        company_loc = page.locator(
             "div.job-details-jobs-unified-top-card__company-name a"
-        ).first.inner_text().strip()
+        ).first
+        if company_loc.count() == 0:
+            company_loc = page.locator(
+                "div.job-details-jobs-unified-top-card__company-name"
+            ).first
+        company = company_loc.inner_text().strip()
 
         # --- Location (first low-emphasis span) ---
         loc_loc = page.locator(
