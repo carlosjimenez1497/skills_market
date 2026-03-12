@@ -1,4 +1,4 @@
-import sqlite3
+# import sqlite3
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 import hashlib
@@ -14,7 +14,7 @@ from lang_detect import FastTextLangDetector
 API_BASE = os.environ["API_BASE"]  # e.g. https://your-backend.onrender.com
 DB_PATH = Path("db/jobs.db")
 # JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
+JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3&f_TPR=r604800&f_WT=3%2C1%2C2&geoId=102890719&keywords=Software%20Engineer%20python&origin=JOB_SEARCH_PAGE_JOB_FILTER"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords=finance%20business%20partner&origin=JOB_SEARCH_PAGE_JOB_FILTER"
@@ -22,7 +22,7 @@ DB_PATH = Path("db/jobs.db")
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Simulation%20Software%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&spellCorrectionEnabled=true"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Engineering%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Application%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&trk=d_flagship3_salary_explorer"
-JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Netherlands%20AND%20Python%20AND%20automotive%20AND%20simulation&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Netherlands%20AND%20Python%20AND%20automotive%20AND%20simulation&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
 MAX_JOBS_PER_PAGE = 25
 MAX_PAGES = 30
 
@@ -43,26 +43,26 @@ def make_fingerprint(company: str, title: str, location: str) -> str:
 
 
 # ---------- DB setup ----------
-def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source TEXT NOT NULL,
-            source_url TEXT NOT NULL,
-            company TEXT,
-            title TEXT,
-            location TEXT,
-            description TEXT,
-            fingerprint TEXT UNIQUE,
-            first_seen DATE,
-            last_seen DATE,
-            times_seen INTEGER DEFAULT 1,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
-        )
-        """)
-        conn.commit()
+# def init_db():
+#     with sqlite3.connect(DB_PATH) as conn:
+#         conn.execute("""
+#         CREATE TABLE IF NOT EXISTS jobs (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             source TEXT NOT NULL,
+#             source_url TEXT NOT NULL,
+#             company TEXT,
+#             title TEXT,
+#             location TEXT,
+#             description TEXT,
+#             fingerprint TEXT UNIQUE,
+#             first_seen DATE,
+#             last_seen DATE,
+#             times_seen INTEGER DEFAULT 1,
+#             created_at TIMESTAMP,
+#             updated_at TIMESTAMP
+#         )
+#         """)
+#         conn.commit()
 
 def normalize_job_link(job_href):
     job_view_url = None
@@ -280,7 +280,7 @@ def upsert_job_via_api(job_payload: dict):
 with sync_playwright() as p:
     context = p.chromium.launch_persistent_context(
         user_data_dir="pw_profile_linkedin",
-        headless=False,
+        headless=True,
     )
     page = context.new_page()
 
@@ -295,7 +295,7 @@ with sync_playwright() as p:
 
     
     
-    page.wait_for_selector("li[data-occludable-job-id]", timeout=15_000)
+    page.wait_for_selector("li[data-occludable-job-id]", timeout=65_000)
     container = get_scroll_container(page)
 
     total_results = get_results_number(page)
