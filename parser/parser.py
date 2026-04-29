@@ -1,5 +1,6 @@
 # import sqlite3
 from pathlib import Path
+import time
 from playwright.sync_api import sync_playwright
 import hashlib
 import re
@@ -7,22 +8,52 @@ import re
 # import datetime
 import requests
 import os
-
+from dotenv import load_dotenv
 from utils.utils import write_log
 from lang_detect import FastTextLangDetector
+import psutil, os
+
+# System memory
+mem = psutil.virtual_memory()
+
+# Python process memory
+process = psutil.Process(os.getpid())
+
+load_dotenv()
 
 API_BASE = os.environ["API_BASE"]  # e.g. https://your-backend.onrender.com
 DB_PATH = Path("db/jobs.db")
+### Top Applcant
 # JOB_URL = "https://www.linkedin.com/jobs/collections/top-applicant/"
-JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r604800&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3&f_TPR=r604800&f_WT=3%2C1%2C2&geoId=102890719&keywords=Software%20Engineer%20python&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+### Python Engineer in Netherlands, past week, entry associereate level
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r86400&geoId=102890719&keywords=Python%20Engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
+### Software Engineer in Netherlands, past week, entry associate level
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25.0&f_E=2%2C3&f_TPR=r86400&geoId=102890719&keywords=software%20engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+### Sofware engineer python in Netherlands, past week, entry associate level
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3&f_TPR=r86400&f_WT=3%2C1%2C2&geoId=102890719&keywords=Software%20Engineer%20python&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+### Finance business partner in Netherlands, past day, all experience levels
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=3%2C4&f_TPR=r86400&keywords=finance%20business%20partner&origin=JOB_SEARCH_PAGE_JOB_FILTER"
+#### Python AND (software OR%20backend OR engineer OR simulation)%20AND%20Netherlands
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=1%2C2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Python%20AND%20(software%20OR%20backend%20OR%20engineer%20OR%20simulation)%20AND%20Netherlands&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&spellCorrectionEnabled=true"
+#### Somilation software engineer in Netherlands, past day, entry associate level
 # JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Simulation%20Software%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true&spellCorrectionEnabled=true"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Engineering%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Application%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&trk=d_flagship3_salary_explorer"
-# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3%2C4&f_TPR=r604800&geoId=102890719&keywords=Netherlands%20AND%20Python%20AND%20automotive%20AND%20simulation&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+#### Engineering software engineer in Netherlands, past day, entry associate level
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Engineering%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Research%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Scientific%20Software%20Developer&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Application%20Engineer&origin=JOB_SEARCH_PAGE_JOB_FILTER&trk=d_flagship3_salary_explorer"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?distance=25&f_E=2%2C3%2C4&f_TPR=r86400&geoId=102890719&keywords=Netherlands%20AND%20Python%20AND%20automotive%20AND%20simulation&origin=JOB_SEARCH_PAGE_JOB_FILTER&refresh=true"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=civil%20engineer%20AND%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=civil%20engineer%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=civil%20engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=traffic%20engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r604800&geoId=102890719&keywords=traffic%20engineer%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r604800&geoId=102890719&keywords=transport%20engineer%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r604800&geoId=102890719&keywords=transport%20modeller%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=transport%20modeller&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r604800&geoId=102890719&keywords=automotive%20engineer&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=automotive%20simulation&origin=JOBS_HOME_KEYWORD_HISTORY"
+# JOB_URL = "https://www.linkedin.com/jobs/search/?currentJobId=4259503283&distance=25.0&f_TPR=r86400&geoId=102890719&keywords=automotive%20simulation%20python&origin=JOBS_HOME_KEYWORD_HISTORY"
 MAX_JOBS_PER_PAGE = 25
 MAX_PAGES = 30
 
@@ -40,6 +71,17 @@ def normalize(text: str) -> str:
 def make_fingerprint(company: str, title: str, location: str) -> str:
     base = f"{normalize(company)}|{normalize(title)}|{normalize(location)}"
     return hashlib.sha1(base.encode("utf-8")).hexdigest()
+
+
+def add_start_param(url: str, start: int) -> str:
+    if 'start=' in url:
+        url = re.sub(r'start=\d+', f'start={start}', url)
+    else:
+        if '?' in url:
+            url += f'&start={start}'
+        else:
+            url += f'?start={start}'
+    return url
 
 
 # ---------- DB setup ----------
@@ -159,14 +201,32 @@ def click_card_index_with_scroll(page, container, i: int, max_tries: int = 5):
     raise RuntimeError(f"Could not click card index {i} after {max_tries} tries")
 
 
-def process_current_page(page, container):
+def process_current_page(page, container, JOB_URL):
     cards = page.locator("li[data-occludable-job-id]")
     count = min(cards.count(), MAX_JOBS_PER_PAGE)
     print("Found cards:", cards.count(), "-> will process:", count)
     write_log(f"Found cards: {cards.count()}-> will process: {count}")
 
     for i in range(count):
-        job_id = click_card_index_with_scroll(page, container, i)
+        try:
+            job_id = click_card_index_with_scroll(page, container, i)
+            # System memory
+            mem = psutil.virtual_memory()
+
+            # Python process memory
+            process = psutil.Process(os.getpid())
+            # print("=== SYSTEM ===")
+            print(f"Used: {mem.percent}% | Available: {mem.available / (1024**3):.2f} GB")
+            write_log(f"Used: {mem.percent}% | Available: {mem.available / (1024**3):.2f} GB")
+
+            # print("=== PYTHON ===")
+            print(f"RSS: {process.memory_info().rss / (1024**2):.2f} MB")
+            write_log(f"RSS: {process.memory_info().rss / (1024**2):.2f} MB")
+        except Exception as e:
+            print(f"Error occurred while processing card {i}: {e}")
+            write_log(f"Error occurred while processing card {i}: {e}")
+            time.sleep(0.5)
+            continue
 
         # Wait for right panel to update to this job
         page.wait_for_selector("div.job-details-jobs-unified-top-card__job-title", timeout=15_000)
@@ -255,6 +315,7 @@ def process_current_page(page, container):
             print(f"[{i+1}/{count}] API upsert failed: {e}")
             write_log(f"[{i+1}/{count}] API upsert failed: {e}")
 
+        time.sleep(0.5)  # small delay to avoid overwhelming the API or hitting rate limits
 
         # print(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
         # write_log(f"[{i+1}/{count}] Saved: {company} — {title} — {location}")
@@ -276,81 +337,105 @@ def upsert_job_via_api(job_payload: dict):
     r.raise_for_status()
     return r.json()
 
+def run(JOB_URL):
+    batch_size = 4
 
-with sync_playwright() as p:
-    context = p.chromium.launch_persistent_context(
-        user_data_dir="pw_profile_linkedin",
-        headless=True,
-    )
-    page = context.new_page()
-
-    page.goto(JOB_URL, wait_until="domcontentloaded")
-    page.wait_for_timeout(2000)
-
-    # manual login if needed
-    if "login" in page.url or "checkpoint" in page.url:
-        print("Please log in manually in the opened browser window...")
-        # Wait up to 2 minutes for you to finish logging in
-        page.wait_for_url("**/jobs/**", timeout=120_000)
-
-    
-    
-    page.wait_for_selector("li[data-occludable-job-id]", timeout=65_000)
-    container = get_scroll_container(page)
-
-    total_results = get_results_number(page)
-    if (total_results % 25) == 0:
-        number_of_pages = int(total_results // 25)
-    else:
-        number_of_pages = int((total_results // 25) + 1)
-    # Give time for the job details panel to render
-    # Wait for the left list to be present
-    
-    
-
-    for page_idx in range(MAX_PAGES):
-        print(f"\n=== Processing page {page_idx+1} ===")
-        write_log(f"\n=== Processing page {page_idx+1} ===")
-
-        # process the current page’s 25 cards (your existing logic)
-        process_current_page(page, container)
-
-        # Find "Next" button
-        next_btn = page.locator(
-            'button[aria-label="View next page"], button[aria-label*="Next"], button.artdeco-pagination__button--next'
-        ).first
-
-        # Stop condition
-        if next_btn.count() == 0:
-            print("No Next button found. Done.")
-            write_log("No Next button found. Done.")
-            break
-
-        aria_disabled = next_btn.get_attribute("aria-disabled")
-        if (aria_disabled == "true") or next_btn.is_disabled():
-            print("Next button disabled. Done.")
-            write_log("Next button disabled. Done.")
-            break
-
-        # Capture current first job id to detect page change
-        before = get_first_job_id(page)
-
-        # Click next
-        next_btn.click()
-
-        # Wait for job list to refresh (first job id changes)
-        page.wait_for_function(
-            """(prevId) => {
-                const li = document.querySelector('li[data-occludable-job-id]');
-                const id = li?.getAttribute('data-occludable-job-id') || '';
-                return id && id !== prevId;
-            }""",
-            arg=before
+    # First, get total_results
+    with sync_playwright() as p:
+        context = p.chromium.launch_persistent_context(
+            user_data_dir="pw_profile_linkedin",
+            headless=True,
         )
+        page = context.new_page()
 
-        # Optional small pause
-        page.wait_for_timeout(800)
-    else:
-        print("Hit MAX_PAGES safety cap.")
-        write_log("Hit MAX_PAGES safety cap.")
-    context.close()
+        page.goto(JOB_URL, wait_until="domcontentloaded")
+        page.wait_for_timeout(2000)
+
+        # manual login if needed
+        if "login" in page.url or "checkpoint" in page.url:
+            print("Please log in manually in the opened browser window...")
+            # Wait up to 2 minutes for you to finish logging in
+            page.wait_for_url("**/jobs/**", timeout=120_000)
+
+        page.wait_for_selector("li[data-occludable-job-id]", timeout=65_000)
+
+        total_results = get_results_number(page)
+        if total_results is None:
+            print("Could not get results number")
+            write_log("Could not get results number")
+            context.close()
+            return
+
+        if (total_results % 25) == 0:
+            number_of_pages = int(total_results // 25)
+        else:
+            number_of_pages = int((total_results // 25) + 1)
+
+        context.close()
+
+    # Now, batch processing
+    for batch_start in range(0, number_of_pages, batch_size):
+        start_param = batch_start * 25
+        current_url = add_start_param(JOB_URL, start_param)
+
+        with sync_playwright() as p:
+            print(f"Starting batch from page {batch_start + 1} with URL: {current_url}")
+            write_log(f"Starting batch from page {batch_start + 1} with URL: {current_url}")
+
+            context = p.chromium.launch_persistent_context(
+                user_data_dir="pw_profile_linkedin",
+                headless=True,
+            )
+            page = context.new_page()
+
+            page.goto(current_url, wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+
+            # Assuming login is remembered
+            page.wait_for_selector("li[data-occludable-job-id]", timeout=65_000)
+            container = get_scroll_container(page)
+
+            pages_in_batch = min(batch_size, number_of_pages - batch_start)
+
+            for page_in_batch in range(pages_in_batch):
+                print(f"\n=== Processing page {batch_start + page_in_batch + 1} ===")
+                write_log(f"\n=== Processing page {batch_start + page_in_batch + 1} ===")
+
+                process_current_page(page, container, current_url)
+
+                if page_in_batch < pages_in_batch - 1:
+                    # Click next
+                    next_btn = page.locator(
+                        'button[aria-label="View next page"], button[aria-label*="Next"], button.artdeco-pagination__button--next'
+                    ).first
+
+                    if next_btn.count() == 0:
+                        print("No Next button found. Stopping batch.")
+                        write_log("No Next button found. Stopping batch.")
+                        break
+
+                    aria_disabled = next_btn.get_attribute("aria-disabled")
+                    if (aria_disabled == "true") or next_btn.is_disabled():
+                        print("Next button disabled. Stopping batch.")
+                        write_log("Next button disabled. Stopping batch.")
+                        break
+
+                    before = get_first_job_id(page)
+
+                    next_btn.click()
+
+                    page.wait_for_function(
+                        """(prevId) => {
+                            const li = document.querySelector('li[data-occludable-job-id]');
+                            const id = li?.getAttribute('data-occludable-job-id') || '';
+                            return id && id !== prevId;
+                        }""",
+                        arg=before
+                    )
+
+                    page.wait_for_timeout(800)
+
+            context.close()
+
+if __name__ == "__main__":
+    run()
