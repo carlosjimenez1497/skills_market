@@ -12,7 +12,10 @@ import os
 app = FastAPI(title="Job API")
 
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173",
+).split(",")
 origin_regex = os.getenv("CORS_ORIGIN_REGEX", "")
 
 app.add_middleware(
