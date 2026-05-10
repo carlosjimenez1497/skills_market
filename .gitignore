@@ -3,3 +3,4 @@ pw_profile_linkedin/
 __pycache__/
 log/
 diagrams/
+backend/.venvback/
