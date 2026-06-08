@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { type Job } from "../api";
+import { supabase } from "../supabase";
 
 type Track = "software" | "finance";
 
@@ -24,6 +26,7 @@ interface BrowseProps {
   selectedJob: Job | null;
   offset: number;
   totalPages: number;
+  onSaveToBoard: (job: Job) => Promise<void>;
 }
 
 export default function Browse({
@@ -48,7 +51,26 @@ export default function Browse({
   selectedJob,
   offset,
   totalPages,
+  onSaveToBoard,
 }: BrowseProps) {
+  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    const jobIds = jobs.map((j) => j.id);
+    supabase
+      .from("user_applications")
+      .select("job_id")
+      .in("job_id", jobIds)
+      .then(({ data }) => {
+        if (data) setSavedIds(new Set(data.map((row) => row.job_id)));
+      });
+  }, [jobs]);
+
+  async function handleSave(job: Job) {
+    await onSaveToBoard(job);
+    setSavedIds((prev) => new Set(prev).add(job.id));
+  }
   return (
     <>
       <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -148,7 +170,7 @@ export default function Browse({
             const isSelected = j.id === selectedJobId;
 
             return (
-              <button
+              <div
                 key={j.id}
                 onClick={() => setSelectedJobId(j.id)}
                 style={{
@@ -181,10 +203,25 @@ export default function Browse({
                   </div>
                 )}
 
-                <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                  Source: {j.source}
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, opacity: 0.7 }}>Source: {j.source}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSave(j); }}
+                    disabled={savedIds.has(j.id)}
+                    style={{
+                      fontSize: 11,
+                      borderRadius: 4,
+                      padding: "2px 8px",
+                      cursor: savedIds.has(j.id) ? "default" : "pointer",
+                      background: savedIds.has(j.id) ? "#d1fae5" : "#eff6ff",
+                      border: `1px solid ${savedIds.has(j.id) ? "#6ee7b7" : "#bfdbfe"}`,
+                      color: savedIds.has(j.id) ? "#065f46" : "#1d4ed8",
+                    }}
+                  >
+                    {savedIds.has(j.id) ? "✓ Saved" : "+ Save"}
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

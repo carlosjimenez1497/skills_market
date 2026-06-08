@@ -3,3 +3,7 @@ uvicorn[standard]
 sqlalchemy>=2.0
 pydantic>=2.0
 psycopg2-binary
+python-dotenv
+requests
+beautifulsoup4
+anthropic

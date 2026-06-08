@@ -8,6 +8,17 @@ from sqlalchemy.orm import Query as SAQuery
 from .db import get_db
 from .models import Job
 import os
+import json
+import re
+
+import requests as http_client
+from bs4 import BeautifulSoup
+
+try:
+    import anthropic as _anthropic
+    _HAS_ANTHROPIC = True
+except ImportError:
+    _HAS_ANTHROPIC = False
 
 app = FastAPI(title="Job API")
 
@@ -124,6 +135,140 @@ def count_jobs(
     q = apply_job_filters(q, track=track, language=language, keywords=keywords)
     total = q.count()
     return {"total": total}
+
+class FetchUrlIn(BaseModel):
+    url: str
+
+class FetchUrlOut(BaseModel):
+    title: str | None = None
+    company: str | None = None
+    location: str | None = None
+    description: str | None = None
+    job_url: str
+    method: str  # jsonld | opengraph | heuristic | llm | partial | failed
+
+def _count_filled(d: dict, keys: tuple) -> int:
+    return sum(1 for k in keys if d.get(k))
+
+@app.post("/api/jobs/fetch-url", response_model=FetchUrlOut)
+def fetch_url_meta(payload: FetchUrlIn):
+    url = payload.url
+    result: dict = {"job_url": url, "method": "failed"}
+
+    try:
+        resp = http_client.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; JobFetcher/1.0)"},
+            timeout=15,
+            allow_redirects=True,
+        )
+        resp.raise_for_status()
+        html = resp.text
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not fetch URL: {e}")
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # --- Layer 1: JSON-LD (schema.org/JobPosting) ---
+    for tag in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(tag.string or "")
+            if isinstance(data, list):
+                data = next(
+                    (d for d in data if isinstance(d, dict) and d.get("@type") == "JobPosting"),
+                    None,
+                )
+            if isinstance(data, dict) and data.get("@type") == "JobPosting":
+                result["title"] = data.get("title")
+                org = data.get("hiringOrganization")
+                if isinstance(org, dict):
+                    result["company"] = org.get("name")
+                elif isinstance(org, str):
+                    result["company"] = org
+                loc = data.get("jobLocation")
+                if isinstance(loc, list) and loc:
+                    loc = loc[0]
+                if isinstance(loc, dict):
+                    addr = loc.get("address") or {}
+                    result["location"] = (
+                        addr.get("addressLocality")
+                        or addr.get("addressRegion")
+                        or addr.get("addressCountry")
+                    )
+                raw_desc = data.get("description", "")
+                if raw_desc:
+                    result["description"] = BeautifulSoup(raw_desc, "html.parser").get_text(
+                        separator="\n", strip=True
+                    )[:3000]
+                result["method"] = "jsonld"
+                break
+        except Exception:
+            continue
+
+    # --- Layer 2: OpenGraph / meta tags ---
+    if _count_filled(result, ("title", "company", "location")) < 2:
+        def og(prop):
+            return soup.find("meta", property=prop) or soup.find("meta", attrs={"name": prop})
+        og_title = og("og:title") or og("title")
+        og_desc = og("og:description") or og("description")
+        if og_title and not result.get("title"):
+            result["title"] = (og_title.get("content") or "").strip() or None
+        if og_desc and not result.get("description"):
+            result["description"] = (og_desc.get("content") or "").strip() or None
+        if result.get("title") or result.get("description"):
+            result.setdefault("method", "opengraph")
+            if result["method"] == "failed":
+                result["method"] = "opengraph"
+
+    # --- Layer 3: Heuristic selectors ---
+    if _count_filled(result, ("title", "company", "location")) < 2:
+        if not result.get("title"):
+            h1 = soup.find("h1")
+            if h1:
+                result["title"] = h1.get_text(strip=True) or None
+        if result.get("title") and result["method"] == "failed":
+            result["method"] = "heuristic"
+
+    # --- Layer 4: LLM fallback via Claude Haiku ---
+    if _count_filled(result, ("title", "company", "location")) < 2 and _HAS_ANTHROPIC:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if api_key:
+            try:
+                for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                    tag.decompose()
+                clean_text = soup.get_text(separator="\n", strip=True)[:4000]
+
+                client = _anthropic.Anthropic(api_key=api_key)
+                msg = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=300,
+                    messages=[{
+                        "role": "user",
+                        "content": (
+                            "Extract job posting info from the text below. "
+                            "Return ONLY a JSON object with these fields (null if not found):\n"
+                            '{"title": "...", "company": "...", "location": "...", '
+                            '"description": "first 300 chars of the actual job description"}\n\n'
+                            f"Text:\n{clean_text}"
+                        ),
+                    }],
+                )
+                raw = msg.content[0].text.strip()
+                m = re.search(r"\{.*\}", raw, re.DOTALL)
+                if m:
+                    parsed = json.loads(m.group())
+                    for k in ("title", "company", "location", "description"):
+                        if not result.get(k) and parsed.get(k):
+                            result[k] = parsed[k]
+                    result["method"] = "llm"
+            except Exception:
+                pass
+
+    if result["method"] == "failed" and _count_filled(result, ("title", "company", "description")) > 0:
+        result["method"] = "partial"
+
+    return result
+
 
 @app.post("/api/jobs/upsert")
 def upsert_job(
